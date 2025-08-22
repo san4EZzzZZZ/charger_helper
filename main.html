@@ -5,76 +5,40 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Создание оффлайн‑карты (KMZ) из XLSX</title>
   <style>
-    :root { --bg:#0b1020; --card:#121a33; --muted:#a9b1c7; --text:#eef2ff; --accent:#6ea8fe; --danger:#ff6b6b; --ok:#3ddc97; }
-    *{box-sizing:border-box}
-    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial,"Noto Sans",sans-serif; background:var(--bg); color:var(--text); margin:0;}
-    .wrap{max-width:920px;margin:40px auto;padding:24px}
-    .card{background:var(--card);border-radius:16px;box-shadow:0 8px 30px rgba(0,0,0,.35); padding:24px}
-    h1{font-size:28px;margin:0 0 8px}
-    p.lead{color:var(--muted);margin:0 0 18px}
-    .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-    label{font-size:14px;color:var(--muted);display:block;margin-bottom:6px}
-    input[type="text"], input[type="number"], input[type="file"], .radio-row{
-      width:100%;padding:12px 14px;border-radius:12px;border:1px solid #1f2a4d;background:#0f1630;color:var(--text);
-    }
-    input[type="file"]{padding:10px}
-    .radio-row{display:flex;gap:16px;align-items:center}
-    .btn{display:inline-flex;align-items:center;gap:10px;background:var(--accent);color:#081226;border:none;border-radius:12px;padding:12px 16px;font-weight:600;cursor:pointer}
-    .btn:disabled{opacity:.6;cursor:not-allowed}
-    .row{display:flex;gap:12px;flex-wrap:wrap;margin-top:10px}
-    .muted{color:var(--muted)}
-    .msg{margin-top:14px;padding:12px 14px;border-radius:12px;line-height:1.45}
-    .msg.ok{background:rgba(61,220,151,.12);border:1px solid rgba(61,220,151,.35)}
-    .msg.err{background:rgba(255,107,107,.12);border:1px solid rgba(255,107,107,.4)}
-    .footer{margin-top:12px;color:var(--muted);font-size:12px}
-    code.badge{background:#0f1630;border:1px solid #1f2a4d;border-radius:8px;padding:2px 6px;font-size:12px}
-    a{color:#9ec5ff}
+    body { font-family: sans-serif; background: #0b1020; color: #fff; margin: 0; padding: 20px; }
+    .card { background: #121a33; padding: 20px; border-radius: 12px; max-width: 700px; margin: auto; }
+    h1 { margin-top: 0; }
+    label { display: block; margin: 12px 0 4px; }
+    input, button { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #333; margin-bottom: 10px; }
+    button { background: #6ea8fe; color: #000; font-weight: bold; cursor: pointer; }
+    .msg { margin-top: 10px; padding: 10px; border-radius: 8px; }
+    .ok { background: rgba(61,220,151,.12); border: 1px solid rgba(61,220,151,.35); }
+    .err { background: rgba(255,107,107,.12); border: 1px solid rgba(255,107,107,.4); }
   </style>
-  <!-- SheetJS (XLSX) -->
+  <!-- Подключаем библиотеки ДО вашего кода -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.19.3/dist/xlsx.full.min.js"></script>
-  <!-- JSZip for KMZ (ZIP) generation -->
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 </head>
 <body>
-  <div class="wrap">
-    <div class="card">
-      <h1>Создание оффлайн‑карты (KMZ) из XLSX</h1>
-      <p class="lead">Файл обрабатывается <strong>полностью в браузере</strong>, без загрузки на сервер. Поддерживаются колонки: <code class="badge">Заряд</code>, <code class="badge">Lat</code>, <code class="badge">Lon</code>, <code class="badge">Номер</code>.</p>
+  <div class="card">
+    <h1>Создание KMZ из Excel</h1>
+    <label>Фамилия исполнителя:</label>
+    <input id="executor" type="text" placeholder="Иванов" />
 
-      <div class="grid">
-        <div>
-          <label>Фамилия исполнителя</label>
-          <input id="executor" type="text" placeholder="Иванов" />
-        </div>
-        <div>
-          <label>Процент заряда (фильтр, ≤ N)</label>
-          <input id="percent" type="number" inputmode="numeric" placeholder="15" />
-        </div>
-        <div>
-          <label>Время суток</label>
-          <div class="radio-row">
-            <label><input type="radio" name="mode" value="день" checked /> День</label>
-            <label><input type="radio" name="mode" value="ночь" /> Ночь</label>
-          </div>
-        </div>
-        <div>
-          <label>Файл Excel (.xlsx)</label>
-          <input id="xlsx" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
-        </div>
-      </div>
+    <label>Процент заряда (фильтр, ≤ N):</label>
+    <input id="percent" type="number" placeholder="15" />
 
-      <div class="row">
-        <button id="run" class="btn">Создать карту и скачать KMZ</button>
-        <span id="hint" class="muted">Внутри архива файл будет называться <code class="badge">OrganicMaps.kml</code>.</span>
-      </div>
-
-      <div id="out"></div>
-
-      <div class="footer">Логика покраски маркеров: 
-        <code class="badge">Заряд ≤ 15%</code> → серый, иначе красный. Отбор точек по фильтру: 
-        <code class="badge">Заряд ≤ N</code> (ваше значение).
-      </div>
+    <label>Время суток:</label>
+    <div>
+      <label><input type="radio" name="mode" value="день" checked> День</label>
+      <label><input type="radio" name="mode" value="ночь"> Ночь</label>
     </div>
+
+    <label>Файл Excel (.xlsx):</label>
+    <input id="xlsx" type="file" accept=".xlsx" />
+
+    <button id="run">Создать карту и скачать KMZ</button>
+    <div id="out"></div>
   </div>
 
 <script>
@@ -86,43 +50,39 @@
   }
 
   function escapeXml(s){
-    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;');
+    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\"/g,'&quot;').replace(/'/g,'&apos;');
   }
 
   function parseNum(v){
-    if (v === null || v === undefined) return NaN;
     if (typeof v === 'number') return v;
-    // replace comma decimal, trim spaces
-    const s = String(v).replace(',', '.').replace(/\s+/g,' ').trim();
+    const s = String(v).replace(',', '.').trim();
     const n = parseFloat(s);
     return Number.isFinite(n) ? n : NaN;
   }
 
   function todayDM(){
     const d = new Date();
-    const dd = String(d.getDate()).padStart(2,'0');
-    const mm = String(d.getMonth()+1).padStart(2,'0');
-    return `${dd}.${mm}`;
+    return `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}`;
   }
 
   function buildKml(rows, executor, mode){
     const name = `${executor} ${mode} ${todayDM()}`.trim();
-    const header = `<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2">\n<Document>\n  <name>${escapeXml(name)}</name>\n`;
-    const styles = `  <Style id="placemark-red">\n    <IconStyle>\n      <Icon>\n        <href>https://omaps.app/placemarks/placemark-red.png</href>\n      </Icon>\n    </IconStyle>\n  </Style>\n\n  <Style id="placemark-gray">\n    <IconStyle>\n      <Icon>\n        <href>https://omaps.app/placemarks/placemark-gray.png</href>\n      </Icon>\n    </IconStyle>\n  </Style>\n`;
+    let kml = `<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2">\n<Document>\n  <name>${escapeXml(name)}</name>\n`;
+    kml += `  <Style id="placemark-red"><IconStyle><Icon><href>https://omaps.app/placemarks/placemark-red.png</href></Icon></IconStyle></Style>\n`;
+    kml += `  <Style id="placemark-gray"><IconStyle><Icon><href>https://omaps.app/placemarks/placemark-gray.png</href></Icon></IconStyle></Style>\n`;
 
-    const items = rows.map((r, i) => {
+    rows.forEach((r,i)=>{
       const lat = parseNum(r.Lat);
       const lon = parseNum(r.Lon);
-      const charge = parseNum(r['Заряд']);
-      if (!Number.isFinite(lat) || !Number.isFinite(lon) || !Number.isFinite(charge)) return null;
-      const number = r['Номер'] ?? '?';
-      const styleUrl = charge <= 15 ? '#placemark-gray' : '#placemark-red';
-      const nameText = `${Math.round(charge)}%`;
-      return `  <Placemark id="pm${i}">\n    <name>${escapeXml(nameText)}</name>\n    <styleUrl>${styleUrl}</styleUrl>\n    <description>${escapeXml('Номер: ' + String(number))}</description>\n    <Point><coordinates>${lon},${lat},0</coordinates></Point>\n  </Placemark>\n`;
-    }).filter(Boolean).join('');
+      const ch = parseNum(r['Заряд']);
+      if(!Number.isFinite(lat)||!Number.isFinite(lon)||!Number.isFinite(ch)) return;
+      const styleUrl = ch <= 15 ? '#placemark-gray' : '#placemark-red';
+      const num = r['Номер'] || '?';
+      kml += `  <Placemark id="pm${i}">\n    <name>${escapeXml(Math.round(ch)+'%')}</name>\n    <styleUrl>${styleUrl}</styleUrl>\n    <description>${escapeXml('Номер: '+num)}</description>\n    <Point><coordinates>${lon},${lat},0</coordinates></Point>\n  </Placemark>\n`;
+    });
 
-    const footer = `</Document>\n</kml>`;
-    return header + styles + items + footer;
+    kml += `</Document>\n</kml>`;
+    return kml;
   }
 
   async function xlsxToJson(file){
@@ -130,70 +90,45 @@
     const wb = XLSX.read(data, {type: 'array'});
     const sheetName = wb.SheetNames[0];
     const ws = wb.Sheets[sheetName];
-    const json = XLSX.utils.sheet_to_json(ws, {defval: '', raw: false});
-    return json;
-  }
-
-  function hasColumns(rows, cols){
-    if (!rows.length) return false;
-    return cols.every(c => Object.prototype.hasOwnProperty.call(rows[0], c));
+    return XLSX.utils.sheet_to_json(ws, {defval: ''});
   }
 
   async function handle(){
-    out.innerHTML = '';
     const file = el('xlsx').files[0];
     const executor = el('executor').value.trim();
     const percent = parseNum(el('percent').value);
-    const mode = (document.querySelector('input[name="mode"]:checked')?.value) || 'день';
+    const mode = document.querySelector('input[name="mode"]:checked').value;
 
-    if (!file){ return showMsg('Сначала выберите файл XLSX.', false); }
-    if (!executor){ return showMsg('Введите фамилию исполнителя.', false); }
-    if (!Number.isFinite(percent)){ return showMsg('Введите корректный порог процента заряда (число).', false); }
+    if (!file) return showMsg('Выберите XLSX файл');
+    if (!executor) return showMsg('Введите фамилию исполнителя');
+    if (!Number.isFinite(percent)) return showMsg('Введите число для процента');
 
     let rows;
     try {
       rows = await xlsxToJson(file);
     } catch (e){
-      console.error(e);
-      return showMsg('Не удалось прочитать Excel: ' + e.message, false);
+      return showMsg('Не удалось прочитать Excel: '+e.message);
     }
 
-    const required = ['Заряд', 'Lat', 'Lon'];
-    if (!hasColumns(rows, required)){
-      return showMsg('В файле должны быть колонки: «Заряд», «Lat», «Lon». Опционально — «Номер».', false);
-    }
+    if (!rows.length) return showMsg('Файл пустой или нет данных');
+    if (!('Заряд' in rows[0] && 'Lat' in rows[0] && 'Lon' in rows[0]))
+      return showMsg('В файле должны быть колонки: Заряд, Lat, Lon');
 
-    const filtered = rows.filter(r => {
-      const ch = parseNum(r['Заряд']);
-      return Number.isFinite(ch) && ch <= percent;
-    });
-
-    if (!filtered.length){
-      return showMsg('Нет точек, удовлетворяющих фильтру. Попробуйте увеличить порог.', false);
-    }
+    const filtered = rows.filter(r => parseNum(r['Заряд']) <= percent);
+    if (!filtered.length) return showMsg('Нет точек по условию');
 
     const kml = buildKml(filtered, executor, mode);
-
-    try {
-      const zip = new JSZip();
-      zip.file('OrganicMaps.kml', kml);
-      const blob = await zip.generateAsync({type:'blob', compression: 'DEFLATE'});
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      const date = new Date();
-      const dd = String(date.getDate()).padStart(2,'0');
-      const mm = String(date.getMonth()+1).padStart(2,'0');
-      a.href = url;
-      a.download = `${executor || 'map'} ${mode} ${dd}_${mm}.kmz`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-      showMsg(`Готово. Скачан KMZ с ${filtered.length} точками.`, true);
-    } catch (e){
-      console.error(e);
-      showMsg('Ошибка при упаковке KMZ: ' + e.message, false);
-    }
+    const zip = new JSZip();
+    zip.file('OrganicMaps.kml', kml);
+    const blob = await zip.generateAsync({type:'blob'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const d = new Date();
+    a.href = url;
+    a.download = `${executor} ${mode} ${String(d.getDate()).padStart(2,'0')}_${String(d.getMonth()+1).padStart(2,'0')}.kmz`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showMsg(`Готово. Скачан KMZ с ${filtered.length} точками.`, true);
   }
 
   el('run').addEventListener('click', handle);
