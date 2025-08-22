@@ -1,137 +1,37 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Создание оффлайн‑карты (KMZ) из XLSX</title>
-  <style>
-    body { font-family: sans-serif; background: #0b1020; color: #fff; margin: 0; padding: 20px; }
-    .card { background: #121a33; padding: 20px; border-radius: 12px; max-width: 700px; margin: auto; }
-    h1 { margin-top: 0; }
-    label { display: block; margin: 12px 0 4px; }
-    input, button { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #333; margin-bottom: 10px; }
-    button { background: #6ea8fe; color: #000; font-weight: bold; cursor: pointer; }
-    .msg { margin-top: 10px; padding: 10px; border-radius: 8px; }
-    .ok { background: rgba(61,220,151,.12); border: 1px solid rgba(61,220,151,.35); }
-    .err { background: rgba(255,107,107,.12); border: 1px solid rgba(255,107,107,.4); }
-  </style>
-  <!-- Подключаем библиотеки ДО вашего кода -->
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.19.3/dist/xlsx.full.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <meta charset="UTF-8">
+  <title>Тест XLSX</title>
+  <!-- Подключаем SheetJS -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.19.3/xlsx.full.min.js"></script>
 </head>
 <body>
-  <div class="card">
-    <h1>Создание KMZ из Excel</h1>
-    <label>Фамилия исполнителя:</label>
-    <input id="executor" type="text" placeholder="Иванов" />
+  <h2>Загрузка Excel</h2>
+  <input type="file" id="excelFile" accept=".xlsx, .xls" />
 
-    <label>Процент заряда (фильтр, ≤ N):</label>
-    <input id="percent" type="number" placeholder="15" />
+  <pre id="output"></pre>
 
-    <label>Время суток:</label>
-    <div>
-      <label><input type="radio" name="mode" value="день" checked> День</label>
-      <label><input type="radio" name="mode" value="ночь"> Ночь</label>
-    </div>
+  <script>
+    document.getElementById('excelFile').addEventListener('change', function (e) {
+      const file = e.target.files[0];
+      if (!file) return;
 
-    <label>Файл Excel (.xlsx):</label>
-    <input id="xlsx" type="file" accept=".xlsx" />
-
-    <button id="run">Создать карту и скачать KMZ</button>
-    <div id="out"></div>
-  </div>
-
-<script>
-  const el = (id) => document.getElementById(id);
-  const out = el('out');
-
-  function showMsg(text, ok=false){
-    out.innerHTML = `<div class="msg ${ok? 'ok':'err'}">${text}</div>`;
-  }
-
-  function escapeXml(s){
-    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\"/g,'&quot;').replace(/'/g,'&apos;');
-  }
-
-  function parseNum(v){
-    if (typeof v === 'number') return v;
-    const s = String(v).replace(',', '.').trim();
-    const n = parseFloat(s);
-    return Number.isFinite(n) ? n : NaN;
-  }
-
-  function todayDM(){
-    const d = new Date();
-    return `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}`;
-  }
-
-  function buildKml(rows, executor, mode){
-    const name = `${executor} ${mode} ${todayDM()}`.trim();
-    let kml = `<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2">\n<Document>\n  <name>${escapeXml(name)}</name>\n`;
-    kml += `  <Style id="placemark-red"><IconStyle><Icon><href>https://omaps.app/placemarks/placemark-red.png</href></Icon></IconStyle></Style>\n`;
-    kml += `  <Style id="placemark-gray"><IconStyle><Icon><href>https://omaps.app/placemarks/placemark-gray.png</href></Icon></IconStyle></Style>\n`;
-
-    rows.forEach((r,i)=>{
-      const lat = parseNum(r.Lat);
-      const lon = parseNum(r.Lon);
-      const ch = parseNum(r['Заряд']);
-      if(!Number.isFinite(lat)||!Number.isFinite(lon)||!Number.isFinite(ch)) return;
-      const styleUrl = ch <= 15 ? '#placemark-gray' : '#placemark-red';
-      const num = r['Номер'] || '?';
-      kml += `  <Placemark id="pm${i}">\n    <name>${escapeXml(Math.round(ch)+'%')}</name>\n    <styleUrl>${styleUrl}</styleUrl>\n    <description>${escapeXml('Номер: '+num)}</description>\n    <Point><coordinates>${lon},${lat},0</coordinates></Point>\n  </Placemark>\n`;
+      const reader = new FileReader();
+      reader.onload = function (evt) {
+        const data = new Uint8Array(evt.target.result);
+        try {
+          const workbook = XLSX.read(data, { type: 'array' });
+          const sheetName = workbook.SheetNames[0];
+          const sheet = workbook.Sheets[sheetName];
+          const json = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+          document.getElementById('output').textContent = JSON.stringify(json, null, 2);
+        } catch (err) {
+          alert("Ошибка: " + err.message);
+        }
+      };
+      reader.readAsArrayBuffer(file);
     });
-
-    kml += `</Document>\n</kml>`;
-    return kml;
-  }
-
-  async function xlsxToJson(file){
-    const data = await file.arrayBuffer();
-    const wb = XLSX.read(data, {type: 'array'});
-    const sheetName = wb.SheetNames[0];
-    const ws = wb.Sheets[sheetName];
-    return XLSX.utils.sheet_to_json(ws, {defval: ''});
-  }
-
-  async function handle(){
-    const file = el('xlsx').files[0];
-    const executor = el('executor').value.trim();
-    const percent = parseNum(el('percent').value);
-    const mode = document.querySelector('input[name="mode"]:checked').value;
-
-    if (!file) return showMsg('Выберите XLSX файл');
-    if (!executor) return showMsg('Введите фамилию исполнителя');
-    if (!Number.isFinite(percent)) return showMsg('Введите число для процента');
-
-    let rows;
-    try {
-      rows = await xlsxToJson(file);
-    } catch (e){
-      return showMsg('Не удалось прочитать Excel: '+e.message);
-    }
-
-    if (!rows.length) return showMsg('Файл пустой или нет данных');
-    if (!('Заряд' in rows[0] && 'Lat' in rows[0] && 'Lon' in rows[0]))
-      return showMsg('В файле должны быть колонки: Заряд, Lat, Lon');
-
-    const filtered = rows.filter(r => parseNum(r['Заряд']) <= percent);
-    if (!filtered.length) return showMsg('Нет точек по условию');
-
-    const kml = buildKml(filtered, executor, mode);
-    const zip = new JSZip();
-    zip.file('OrganicMaps.kml', kml);
-    const blob = await zip.generateAsync({type:'blob'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    const d = new Date();
-    a.href = url;
-    a.download = `${executor} ${mode} ${String(d.getDate()).padStart(2,'0')}_${String(d.getMonth()+1).padStart(2,'0')}.kmz`;
-    a.click();
-    URL.revokeObjectURL(url);
-    showMsg(`Готово. Скачан KMZ с ${filtered.length} точками.`, true);
-  }
-
-  el('run').addEventListener('click', handle);
-</script>
+  </script>
 </body>
 </html>
